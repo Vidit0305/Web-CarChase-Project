@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Endless Car Chase — Escape the Cops!</title>
+  <meta name="description" content="Free 3D cop chase game in your browser. Drift, dodge and trick police cars, SWAT vans and tanks into crashing. Collect cash, unlock 7 cars and beat your high score." />
+  <meta name="theme-color" content="#1b1b1b" />
+  <meta property="og:title" content="Endless Car Chase — Escape the Cops!" />
+  <meta property="og:description" content="Drift, dodge and make the cops crash. How long can you survive?" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script type="importmap">
+    { "imports": { "three": "./lib/three.module.min.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="pops"></div>
+  <div id="arrows"></div>
+
+  <!-- ===== Main menu ===== -->
+  <section id="menu" class="screen">
+    <div class="topbar">
+      <button id="btnSfx" class="icon" title="Sound effects">🔊</button>
+      <button id="btnMusic" class="icon" title="Music">🎵</button>
+    </div>
+    <h1 class="title">ENDLESS<br /><span>CAR CHASE!</span></h1>
+    <div class="menu-stats">
+      <div><small>BEST</small><b id="menuBest">0</b></div>
+      <div><small>CASH</small><b id="menuCash" class="cash">$0</b></div>
+    </div>
+    <button id="btnPlay" class="btn big">GO!</button>
+    <div class="menu-row">
+      <button id="btnGarage" class="btn ghost">🏪 GARAGE</button>
+      <button id="btnBoard" class="btn ghost">🏆 LEADERBOARD</button>
+    </div>
+    <button id="btnDriver" class="driver">👤 <span id="driverName">Driver</span> <small>✎ change</small></button>
+    <p class="help desktop-only">⬅ ➡ steer &nbsp;·&nbsp; ⬆ / SPACE nitro &nbsp;·&nbsp; ⬇ brake &nbsp;·&nbsp; P pause</p>
+    <p class="help touch-only">Hold left / right to steer · 🔥 for nitro</p>
+    <p class="tip">Trick cops into crashing into each other, rocks and red barrels!</p>
+  </section>
+
+  <!-- ===== Name entry ===== -->
+  <section id="nameScreen" class="screen overlay hidden">
+    <form id="nameForm" class="name-card" autocomplete="off">
+      <div class="name-emoji">🚔</div>
+      <h2>WHAT'S YOUR NAME, DRIVER?</h2>
+      <p>Your name and survival time go on the leaderboard.</p>
+      <input id="nameInput" type="text" maxlength="16" placeholder="Enter your name" spellcheck="false" enterkeyhint="go" />
+      <div id="nameError" class="name-error"></div>
+      <button type="submit" class="btn big">START ENGINE</button>
+    </form>
+  </section>
+
+  <!-- ===== Leaderboard ===== -->
+  <section id="board" class="screen overlay hidden">
+    <div class="board-card">
+      <div class="board-head">
+        <button id="boardBack" class="btn small ghost">← BACK</button>
+        <h2>🏆 LEADERBOARD</h2>
+        <span></span>
+      </div>
+      <div class="tabs">
+        <button id="tabGlobal" class="tab active">TOP DRIVERS</button>
+        <button id="tabMine" class="tab">MY RUNS</button>
+      </div>
+      <div id="boardMode" class="board-mode"></div>
+      <div class="board-table">
+        <div class="board-row head"><span>#</span><span>DRIVER</span><span>SURVIVED</span><span>SCORE</span><span class="hide-sm">💥</span></div>
+        <div id="boardList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Garage ===== -->
+  <section id="garage" class="screen hidden">
+    <div class="garage-top">
+      <button id="gBack" class="btn small ghost">← BACK</button>
+      <div class="pill cash" id="gCash">$0</div>
+    </div>
+    <div class="garage-panel">
+      <div class="garage-head">
+        <button id="gPrev" class="icon nav">◀</button>
+        <div>
+          <h2 id="gName">Car</h2>
+          <small id="gIndex">1 / 7</small>
+        </div>
+        <button id="gNext" class="icon nav">▶</button>
+      </div>
+      <div id="gStats"></div>
+      <button id="gAction" class="btn">SELECT</button>
+    </div>
+  </section>
+
+  <!-- ===== HUD ===== -->
+  <section id="hud" class="screen hidden">
+    <button id="btnPause" class="icon pause" title="Pause (P)">❚❚</button>
+    <div class="score-wrap">
+      <div id="score" class="score">0</div>
+      <div id="stars" class="stars">★☆☆☆☆☆</div>
+    </div>
+    <div class="hud-right">
+      <div class="pill cash" id="cash">$0</div>
+      <div class="pill">💥 <span id="kills">0</span></div>
+      <div class="pill">⏱ <span id="time">0:00</span></div>
+    </div>
+    <div class="bars">
+      <div class="meter"><label>ARMOR</label><div class="track"><i id="hpFill"></i></div></div>
+      <div class="meter"><label>NITRO</label><div class="track nitro"><i id="nitroFill"></i></div></div>
+    </div>
+    <div id="bust" class="bust"><span>GETTING BUSTED!</span><div class="track"><i id="bustFill"></i></div></div>
+    <div id="levelFlash" class="level-flash"></div>
+    <div class="touch-controls touch-only">
+      <button id="tLeft" class="tbtn">◀</button>
+      <button id="tRight" class="tbtn">▶</button>
+      <button id="tNitro" class="tbtn nitro">🔥</button>
+    </div>
+  </section>
+
+  <!-- ===== Pause ===== -->
+  <section id="pause" class="screen overlay hidden">
+    <h2 class="big-title">PAUSED</h2>
+    <button id="btnResume" class="btn big">RESUME</button>
+    <button id="btnRestart" class="btn ghost">RESTART</button>
+    <button id="btnQuit" class="btn ghost">MAIN MENU</button>
+  </section>
+
+  <!-- ===== Game over ===== -->
+  <section id="over" class="screen overlay hidden">
+    <h2 id="overTitle" class="big-title red">WRECKED!</h2>
+    <div id="newBest" class="new-best hidden">NEW HIGH SCORE!</div>
+    <div id="overRank" class="over-rank"></div>
+    <div class="result">
+      <div class="row main"><span>SCORE</span><b id="overScore">0</b></div>
+      <div class="row main"><span>HIGH SCORE</span><b id="overBest">0</b></div>
+      <div class="row"><span>Survived</span><b id="overTime">0:00</b></div>
+      <div class="row"><span>Cops destroyed</span><b id="overKills">0</b></div>
+      <div class="row"><span>Cash earned</span><b id="overCash" class="cash">$0</b></div>
+    </div>
+    <button id="btnRetry" class="btn big">↻ RETRY</button>
+    <div class="row-btns">
+      <button id="btnOverBoard" class="btn ghost">🏆 LEADERBOARD</button>
+      <button id="btnOverGarage" class="btn ghost">🏪 GARAGE</button>
+      <button id="btnOverMenu" class="btn ghost">MENU</button>
+    </div>
+  </section>
+
+  <noscript>Please enable JavaScript to play.</noscript>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
